@@ -1,0 +1,24 @@
+# Secrets — never bake into the image
+.env
+
+# Runtime data — mounted or created fresh in the container
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Git
+.git/
+.gitignore

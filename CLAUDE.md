@@ -18,9 +18,32 @@ pip install -r requirements.txt      # a .venv with deps already exists locally
 uvicorn app:app --reload             # → http://127.0.0.1:8000
 ```
 
-- Boots in **simulated mode** with no API key — every screen works, zero cost.
-- For genuine Track B (LLM) tests: copy `.env.example` → `.env`, set `OPENAI_API_KEY`, restart. Provider is
-  **OpenAI** (chosen by the product owner). `config.LIVE_MODE` is `True` only when a key is present.
+- Boots in **simulated mode** with no credentials — every screen works, zero cost.
+- For genuine Track B (LLM) tests: copy `.env.example` → `.env`, fill in your provider section, restart.
+  `config.LIVE_MODE` is `True` only when a key (and, for Azure, an endpoint) is present.
+
+**Supported LLM providers** (set `LLM_PROVIDER` in `.env`):
+
+| `LLM_PROVIDER` | Typical use case | Extra env vars needed |
+|---|---|---|
+| `openai` (default) | Direct OpenAI API | `OPENAI_API_KEY` |
+| `azure` | Azure OpenAI Service — most common in banks | `OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_VERSION` |
+| `custom` | Any OpenAI-compatible proxy — internal LLM Garden, vLLM, Ollama | `OPENAI_API_KEY`, `OPENAI_BASE_URL` |
+
+Model names (`OPENAI_CHATBOT_MODEL`, `OPENAI_JUDGE_MODEL`) are the same for all providers; for Azure they map to
+your **deployment name**.
+
+## Docker
+
+```bash
+docker build -t model-risk-studio .
+docker run -p 8000:8000 --env-file .env model-risk-studio
+```
+
+For persistent data across restarts, mount the data directory:
+```bash
+docker run -p 8000:8000 --env-file .env -v $(pwd)/data:/app/data model-risk-studio
+```
 
 ## Architecture (all files are small and single-purpose)
 

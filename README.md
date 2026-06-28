@@ -52,30 +52,58 @@ That's it — **no API key needed to start.** The app boots in *simulated* mode 
 
 ## Live vs. simulated mode (and what it costs)
 
-Track B genuinely tests a live AI model. You chose **OpenAI** as the provider, so the app uses the OpenAI API.
+Track B genuinely tests a live AI model.
 
-- **Simulated mode (default, no key):** every screen works, including Track B, which returns clearly-labelled
-  illustrative answers. **Cost: nothing.** The simulation is even guardrail-aware, so the "weaken a guardrail
-  and watch a test fail" demo works without a key.
-- **Live mode (with a key):** Track B makes **real** calls to OpenAI.
+- **Simulated mode (default, no credentials):** every screen works, including Track B, which returns
+  clearly-labelled illustrative answers. **Cost: nothing.** The simulation is guardrail-aware, so the "weaken
+  a guardrail and watch a test fail" demo works without any key.
+- **Live mode (with credentials):** Track B makes **real** calls to your chosen LLM endpoint.
 
 To switch on live mode:
 
 ```bash
 cp .env.example .env        # (Windows: copy .env.example .env)
-# then edit .env and paste your key:
-#   OPENAI_API_KEY=sk-...
+# then edit .env — see the three provider options below
 ```
 
 Restart the app. The top bar will switch from `● SIMULATED` to `● LIVE`.
 
+### Supported LLM providers
+
+Set `LLM_PROVIDER` in `.env` to one of these:
+
+| Provider | When to use | Key env vars |
+|---|---|---|
+| `openai` (default) | Direct OpenAI API | `OPENAI_API_KEY` |
+| `azure` | **Azure OpenAI Service** — recommended for bank deployments (stays in your tenant, already compliant in most jurisdictions) | `OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
+| `custom` | Any **OpenAI-compatible proxy** — internal LLM Garden, vLLM, Ollama, AWS Bedrock gateway | `OPENAI_API_KEY`, `OPENAI_BASE_URL` |
+
+Model names (`OPENAI_CHATBOT_MODEL`, `OPENAI_JUDGE_MODEL`) are the same for all providers. For Azure they
+map to your **deployment name** (e.g. `gpt-4o-mini`). See `.env.example` for the full list.
+
 ### How many calls / how much does a live run cost?
 
 A **full Track B run ≈ 43 model calls** — about **25 to the chatbot under test** and **18 to the impartial
-"LLM-as-judge"**. With the default small model (`gpt-4o-mini`), a full run is typically **a few US cents**.
-Only Track B makes calls — the dashboard, inventory, tiering, Track A, findings and reports are all computed
-locally and cost nothing. Token prices change, so check current OpenAI pricing. You can change the models in
-`.env` (`OPENAI_CHATBOT_MODEL`, `OPENAI_JUDGE_MODEL`).
+"LLM-as-judge"**. With `gpt-4o-mini`, a full run is typically **a few US cents**. Only Track B makes calls —
+the dashboard, inventory, tiering, Track A, findings and reports are all computed locally and cost nothing.
+Token prices change, so check your provider's current pricing.
+
+---
+
+## Running with Docker
+
+```bash
+docker build -t model-risk-studio .
+docker run -p 8000:8000 --env-file .env model-risk-studio
+```
+
+For data persistence across container restarts, mount the data directory:
+
+```bash
+docker run -p 8000:8000 --env-file .env -v "$(pwd)/data:/app/data" model-risk-studio
+```
+
+Then open **http://localhost:8000**. The `.env` file is never baked into the image (see `.dockerignore`).
 
 ---
 

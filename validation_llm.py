@@ -205,11 +205,21 @@ class RunContext:
         self._client = None
         if self.live:
             try:
-                from openai import OpenAI
-
-                self._client = OpenAI(api_key=config.OPENAI_API_KEY)
+                if config.LLM_PROVIDER == "azure":
+                    from openai import AzureOpenAI
+                    self._client = AzureOpenAI(
+                        azure_endpoint=config.AZURE_OPENAI_ENDPOINT,
+                        api_key=config.OPENAI_API_KEY,
+                        api_version=config.AZURE_OPENAI_API_VERSION,
+                    )
+                else:
+                    from openai import OpenAI
+                    kwargs: dict = {"api_key": config.OPENAI_API_KEY}
+                    if config.LLM_PROVIDER == "custom" and config.OPENAI_BASE_URL:
+                        kwargs["base_url"] = config.OPENAI_BASE_URL
+                    self._client = OpenAI(**kwargs)
             except Exception as exc:  # pragma: no cover
-                self.error = f"Could not initialise the OpenAI client: {exc}"
+                self.error = f"Could not initialise the LLM client ({config.LLM_PROVIDER}): {exc}"
                 self.live = False
 
     # ── chatbot under test ────────────────────────────────────────────────--

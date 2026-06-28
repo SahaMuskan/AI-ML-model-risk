@@ -3,8 +3,13 @@ Central configuration.
 
 Reads settings from environment variables (and a local .env file if present).
 The single most important runtime fact this exposes is LIVE_MODE: whether a real
-OpenAI key is configured. When it is False, Track B runs in clearly-labelled
+LLM key/endpoint is configured. When it is False, Track B runs in clearly-labelled
 simulated mode and makes no network calls.
+
+Supported LLM providers (set LLM_PROVIDER in .env):
+  openai  — Direct OpenAI API (default)
+  azure   — Azure OpenAI Service (most common in banks)
+  custom  — Any OpenAI-compatible endpoint, e.g. an internal LLM Garden proxy
 """
 
 from __future__ import annotations
@@ -27,13 +32,27 @@ DB_PATH = DATA_DIR / "mrm.db"
 TEMPLATES_DIR = BASE_DIR / "templates"
 STATIC_DIR = BASE_DIR / "static"
 
-# ── OpenAI / Track B ─────────────────────────────────────────────────────────
+# ── LLM provider selection ────────────────────────────────────────────────────
+# Values: "openai" | "azure" | "custom"
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").strip().lower()
+
+# ── Credentials & endpoints ───────────────────────────────────────────────────
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 OPENAI_CHATBOT_MODEL = os.getenv("OPENAI_CHATBOT_MODEL", "gpt-4o-mini").strip()
 OPENAI_JUDGE_MODEL = os.getenv("OPENAI_JUDGE_MODEL", "gpt-4o-mini").strip()
 
-# Live mode is on only when a key is actually present.
-LIVE_MODE = bool(OPENAI_API_KEY)
+# azure provider
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "").strip()
+AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01").strip()
+
+# custom / LLM Garden provider — OpenAI-compatible base URL
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "").strip()
+
+# Live mode: a key (and, for Azure, an endpoint) must be present.
+LIVE_MODE = bool(
+    (LLM_PROVIDER == "azure" and AZURE_OPENAI_ENDPOINT and OPENAI_API_KEY)
+    or (LLM_PROVIDER in ("openai", "custom") and OPENAI_API_KEY)
+)
 
 APP_TITLE = "Model Risk Studio"
 APP_SUBTITLE = "AI / ML Model Governance & Validation Framework"
