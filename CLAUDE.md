@@ -11,6 +11,14 @@ pre-loaded with ~18 fictional banking models so it demos immediately.
 
 It is a portfolio / learning prototype, **not production software**. All results are illustrative.
 
+## Companion docs
+
+- **[SETUP.md](SETUP.md)** — install, connect an LLM provider (OpenAI / Azure / internal gateway), live mode, troubleshooting.
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** — deploying for a team: Docker, Azure/AWS/on-prem, auth, persistence, scaling, go-live checklist.
+- **[README.md](README.md)** — user-facing overview and the honest caveats.
+
+Keep these in sync when behaviour changes (providers, ports, env vars, the no-auth / SQLite-single-writer facts).
+
 ## Run it
 
 ```bash

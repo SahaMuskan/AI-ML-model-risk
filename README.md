@@ -25,6 +25,18 @@ and a set of example findings, so you can click around and demo it immediately.
 
 ---
 
+## Documentation
+
+| Guide | What it covers |
+|---|---|
+| **[SETUP.md](SETUP.md)** | Install, connect your LLM service (OpenAI / Azure OpenAI / internal gateway), switch to live mode, troubleshooting, customising for your own bank. |
+| **[DEPLOYMENT.md](DEPLOYMENT.md)** | Deploying for a team — Docker, Azure, AWS, on-prem/air-gapped, authentication, persistence, scaling, and a pre-go-live checklist. |
+| **[CLAUDE.md](CLAUDE.md)** | Architecture and conventions for developers extending the app. |
+
+The quick start below gets you running locally in a couple of minutes.
+
+---
+
 ## Quick start
 
 You need **Python 3.10+**. From this folder:
@@ -104,6 +116,9 @@ docker run -p 8000:8000 --env-file .env -v "$(pwd)/data:/app/data" model-risk-st
 ```
 
 Then open **http://localhost:8000**. The `.env` file is never baked into the image (see `.dockerignore`).
+
+For deploying to a team — Azure App Service / AKS, AWS ECS, on-prem, authentication,
+persistence and scaling — see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 ---
 
