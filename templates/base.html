@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}{{ app_title }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <a href="/" class="brand-link">
+      <span class="brand-mark">◴</span>
+      <span class="brand-text">
+        <strong>{{ app_title }}</strong>
+        <small>{{ app_subtitle }}</small>
+      </span>
+    </a>
+  </div>
+  <nav class="mainnav">
+    <a href="/">Dashboard</a>
+    <a href="/inventory">Inventory</a>
+    <a href="/findings">Findings</a>
+    <a href="/lifecycle">Lifecycle (SR 11-7)</a>
+    <a href="/methodology">Methodology</a>
+  </nav>
+  <div class="topbar-right">
+    {% if live_mode %}
+      <span class="badge mode-live" title="A live API key is configured — Track B makes real calls.">● LIVE — {{ chatbot_model }}</span>
+    {% else %}
+      <span class="badge mode-sim" title="No API key — Track B runs simulated at zero cost.">● SIMULATED</span>
+    {% endif %}
+    <form method="post" action="/reset-demo" onsubmit="return confirm('Reset all data back to the bundled demo? Your edits will be lost.');">
+      <button class="btn btn-ghost" type="submit" title="Restore the demo data">Reset demo</button>
+    </form>
+  </div>
+</header>
+
+<div class="disclaimer-ribbon" id="disclaimer">
+  <span class="disc-icon">⚠</span>
+  <span>This is an illustrative prototype.</span>
+  <button class="disc-toggle" onclick="document.getElementById('disc-detail').classList.toggle('open')">details</button>
+  <ul id="disc-detail">
+    {% for d in disclaimers %}<li>{{ d }}</li>{% endfor %}
+  </ul>
+</div>
+
+<main class="content">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="foot">
+  <span>{{ app_title }} — illustrative MRM prototype · generated demo data · {{ today }}</span>
+  <span>Anchored to SR 11-7 · NIST AI RMF · EU AI Act (check current versions for your jurisdiction)</span>
+</footer>
+
+<script src="/static/app.js" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

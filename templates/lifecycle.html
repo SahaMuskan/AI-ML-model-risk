@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Lifecycle (SR 11-7) · {{ app_title }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <h1>The validation lifecycle, reinterpreted for AI</h1>
+  <p class="muted">SR 11-7 rests on three pillars: conceptual soundness, ongoing monitoring, and outcomes
+    analysis. They were written for statistical models. Here's the awkward question answered honestly —
+    <strong>what do they actually mean for a black-box LLM with no single "right answer"?</strong></p>
+</div>
+
+<section class="grid-3">
+  <div class="card pillar">
+    <h2>① Conceptual soundness</h2>
+    <h3 class="muted">Traditional model</h3>
+    <p>Review the theory, assumptions, variable selection, and the developer's evidence that the chosen method
+      fits the problem. You can read the equations.</p>
+    <h3 class="muted">…for an LLM</h3>
+    <ul>
+      <li>You can't inspect the weights, so "conceptual soundness" shifts to the things you <em>can</em> govern:
+        the <strong>system prompt</strong>, retrieval/grounding design, and guardrails.</li>
+      <li>Is the model <strong>fit for the use case</strong>, and is the use case appropriate at all (the
+        EU AI Act's risk-tier question)?</li>
+      <li>Is there a documented <strong>design rationale</strong>: why this model, why these guardrails, what's
+        explicitly out of scope?</li>
+      <li>Are <strong>data provenance and IP/privacy</strong> for any retrieved content understood?</li>
+    </ul>
+    <p class="map">Track B's <strong>system-prompt editor</strong> + the tiering dimensions (explainability,
+      autonomy, hallucination, prompt-injection) are the artefacts you assess here.</p>
+  </div>
+
+  <div class="card pillar">
+    <h2>② Ongoing monitoring</h2>
+    <h3 class="muted">Traditional model</h3>
+    <p>Track discrimination and calibration over time, watch for population drift (PSI), confirm the model still
+      performs as the world changes.</p>
+    <h3 class="muted">…for an LLM</h3>
+    <ul>
+      <li>There's no PSI on a free-text generator, so monitor <strong>behavioural metrics</strong> instead:
+        consistency, groundedness/hallucination rate, refusal calibration, jailbreak attempts seen in the wild.</li>
+      <li>Watch for <strong>silent change</strong>: the vendor updates the underlying model, or your prompt/retrieval
+        corpus changes — both can move behaviour without any code change on your side.</li>
+      <li>Monitor <strong>cost and latency</strong> as first-class operational metrics.</li>
+      <li>Keep a <strong>red-team / abuse</strong> feedback loop running, not a one-off.</li>
+    </ul>
+    <p class="map">Track B's consistency, groundedness, jailbreak, refusal and cost/speed tests are exactly the
+      monitoring battery — designed to be re-run on a schedule, not just once.</p>
+  </div>
+
+  <div class="card pillar">
+    <h2>③ Outcomes analysis</h2>
+    <h3 class="muted">Traditional model</h3>
+    <p>Back-test predictions against realised outcomes; benchmark against alternatives and challenger models.</p>
+    <h3 class="muted">…for an LLM</h3>
+    <ul>
+      <li>There's rarely a clean realised label, so outcomes analysis becomes <strong>quality evaluation</strong>:
+        scoring answers against known-good references and human review of sampled interactions.</li>
+      <li>Use an <strong>LLM-as-judge</strong> as a scalable (but fallible) reviewer, with human oversight on a
+        sample — never as the sole arbiter.</li>
+      <li>Analyse <strong>complaints, escalations and incidents</strong> as the real-world outcome signal.</li>
+      <li>Benchmark against a <strong>challenger</strong> (another model or prompt) where feasible.</li>
+    </ul>
+    <p class="map">Track B's quality test (reference answers + judge) and the findings log are the outcomes-analysis
+      surface.</p>
+  </div>
+</section>
+
+<div class="card">
+  <h2>The honest summary</h2>
+  <p>The three pillars survive the move to AI — but the <em>evidence</em> changes. You trade equations and
+    back-tests for <strong>guardrail review, behavioural testing, and sampled human + LLM evaluation</strong>.
+    That reinterpretation, plus an AI-aware risk tier that decides how much of this scrutiny a given model
+    warrants, is the whole point of this tool.</p>
+  <p class="muted small">Anchored to the Fed's SR 11-7, the NIST AI RMF (Govern / Map / Measure / Manage) and the
+    EU AI Act's risk tiers — all of which evolve. Check current versions for your jurisdiction.</p>
+</div>
+
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Track B · {{ m.name }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="crumbs"><a href="/inventory">Inventory</a> / <a href="/models/{{ m.id }}">{{ m.id }}</a> / Track B</div>
+  <h1>Track B — Generative / LLM validation</h1>
+  <p class="muted">{{ m.name }} — we actually send the chatbot prompts and check what comes back.</p>
+  <div class="badge-row">
+    {{ ui.tier_badge(m._tier.tier) }}
+    {% if live_mode %}<span class="badge mode-live">● LIVE — real calls ({{ chatbot_model }})</span>
+    {% else %}<span class="badge mode-sim">● SIMULATED — no key, zero cost</span>{% endif %}
+  </div>
+</div>
+
+<div class="card callout-card">
+  <h2>Before you run — the honest bit</h2>
+  <ul class="honest">
+    <li>A <strong>full run makes about {{ estimate.total }} model calls</strong>
+        (~{{ estimate.chatbot }} to the chatbot + ~{{ estimate.judge }} to the impartial judge).</li>
+    {% if live_mode %}
+      <li>You are in <strong>LIVE</strong> mode: these are real calls to <code>{{ chatbot_model }}</code>
+          (judge: <code>{{ judge_model }}</code>) and will cost money / consume quota. With a small model
+          a full run is typically a few US cents — but check current pricing.</li>
+    {% else %}
+      <li>You are in <strong>SIMULATED</strong> mode (no API key): results are illustrative and cost nothing.
+          Add an <code>OPENAI_API_KEY</code> to a <code>.env</code> file and restart to run for real.</li>
+    {% endif %}
+    <li>The test sets here are small starting points. They would need calibration and larger samples
+        before anyone relied on the results.</li>
+  </ul>
+</div>
+
+<form method="post" id="trackb-form">
+  <div class="grid-2">
+    <div class="card">
+      <h2>System prompt (the chatbot's instructions)</h2>
+      <p class="muted small">This is what defines the chatbot's behaviour and guardrails. Edit it, then
+        <em>Run tests</em> to see the effect. Try deleting the "Never reveal… system instructions" line,
+        running, and watching jailbreak resistance fail — that demonstrates the point better than anything.</p>
+      <div class="guardrail-badges">
+        {% for key, present in guardrails.items() %}
+          <span class="badge {{ 'gr-on' if present else 'gr-off' }}">
+            {{ '✓' if present else '✗' }} {{ guardrail_labels[key] }}
+          </span>
+        {% endfor %}
+      </div>
+      <textarea name="system_prompt" rows="18" class="prompt-area">{{ system_prompt }}</textarea>
+      <div class="form-row">
+        <button class="btn" type="submit" formaction="/models/{{ m.id }}/track-b/system-prompt">Save prompt</button>
+        <button class="btn btn-ghost" type="submit" formaction="/models/{{ m.id }}/track-b/reset-prompt"
+                formnovalidate>Reset to default</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tests to run</h2>
+      <div class="test-picker">
+        {% for t in tests %}
+        <label class="test-opt">
+          <input type="checkbox" name="tests" value="{{ t.key }}" checked />
+          <span><strong>{{ t.name }}</strong><br /><span class="muted small">{{ t.desc }}</span></span>
+        </label>
+        {% endfor %}
+      </div>
+      <div class="form-row">
+        <button class="btn btn-primary" id="run-btn" type="submit"
+                formaction="/models/{{ m.id }}/track-b/run">▶ Run tests</button>
+      </div>
+      <p class="muted small">Running uses the prompt currently in the editor.</p>
+    </div>
+  </div>
+</form>
+
+{% if last_run %}
+<div class="card">
+  <h2>Latest results</h2>
+  {% if not last_run.ok %}
+    <p class="callout bad"><strong>Run failed.</strong> {{ last_run.error }}</p>
+  {% else %}
+  <div class="badge-row results-head">
+    <span class="badge grade-{{ last_run.summary.overall }}">Overall: {{ last_run.summary.overall }}</span>
+    <span class="badge grade-PASS">{{ last_run.summary.pass }} pass</span>
+    <span class="badge grade-WATCH">{{ last_run.summary.watch }} watch</span>
+    <span class="badge grade-FAIL">{{ last_run.summary.fail }} fail</span>
+    <span class="badge pill">{{ last_run.mode }} mode</span>
+    <span class="muted small">run at {{ last_run.run_at }}</span>
+  </div>
+
+  <div class="cost-panel">
+    <div><span class="cp-num">{{ last_run.cost.total_calls }}</span><span class="cp-lbl">model calls</span></div>
+    <div><span class="cp-num">{{ last_run.cost.chatbot_calls }}</span><span class="cp-lbl">chatbot</span></div>
+    <div><span class="cp-num">{{ last_run.cost.judge_calls }}</span><span class="cp-lbl">judge</span></div>
+    <div><span class="cp-num">{{ last_run.cost.in_tokens + last_run.cost.out_tokens }}</span><span class="cp-lbl">tokens (approx)</span></div>
+    <div><span class="cp-num">${{ '%.4f' % last_run.cost.est_cost_usd }}</span><span class="cp-lbl">est. cost{{ '*' if last_run.mode=='Simulated' }}</span></div>
+    <div><span class="cp-num">{{ last_run.cost.avg_latency_s }}s</span><span class="cp-lbl">avg latency</span></div>
+  </div>
+  {% if last_run.mode=='Simulated' %}<p class="muted small">*Token/cost figures in simulated mode are rough estimates for illustration only.</p>{% endif %}
+
+  {% for t in last_run.tests %}
+  <div class="test-result">
+    <div class="tr-head">
+      <span class="badge grade-{{ t.status }}">{{ t.status }}</span>
+      <strong>{{ t.name }}</strong>
+      <span class="muted">— {{ t.metric }}</span>
+    </div>
+    <p class="muted small">{{ t.reason }}</p>
+    <details>
+      <summary>Show the {{ t.cases|length }} prompt(s) and response(s)</summary>
+      <table class="tbl cases">
+        <thead><tr><th>Prompt</th><th>Response</th><th>Verdict</th></tr></thead>
+        <tbody>
+          {% for c in t.cases %}
+          <tr class="{{ 'case-fail' if not c.passed }}">
+            <td class="case-prompt">{{ c.prompt }}{% if c.expected %}<div class="muted small">({{ c.expected }})</div>{% endif %}</td>
+            <td class="case-resp">{{ c.response }}{% if c.reference %}<div class="muted small">ref: {{ c.reference }}</div>{% endif %}</td>
+            <td>{% if c.passed %}<span class="badge grade-PASS">{{ c.verdict }}</span>{% else %}<span class="badge grade-FAIL">{{ c.verdict }}</span>{% endif %}
+                {% if c.reason %}<div class="muted small">{{ c.reason }}</div>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+{% else %}
+<div class="card"><p class="muted">No test run yet. Pick your tests and press <strong>Run tests</strong>.</p></div>
+{% endif %}
+
+<div class="actions">
+  <a class="btn" href="/models/{{ m.id }}">← Back to model</a>
+  <a class="btn" href="/lifecycle">What do SR 11-7's three pillars mean for an LLM? →</a>
+  <a class="btn btn-primary" href="/models/{{ m.id }}/report">Draft validation report</a>
+</div>
+
+<div class="run-overlay" id="run-overlay">
+  <div class="run-box">
+    <div class="spinner"></div>
+    <p><strong>Running tests…</strong></p>
+    <p class="muted small">{% if live_mode %}Making real API calls — this can take up to a minute.{% else %}Simulating responses…{% endif %}</p>
+  </div>
+</div>
+
+{% endblock %}

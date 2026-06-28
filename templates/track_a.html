@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Track A · {{ m.name }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="crumbs"><a href="/inventory">Inventory</a> / <a href="/models/{{ m.id }}">{{ m.id }}</a> / Track A</div>
+  <h1>Track A — Traditional ML validation</h1>
+  <p class="muted">{{ m.name }} · {{ m.methodology }}</p>
+  <div class="badge-row">
+    {{ ui.tier_badge(m._tier.tier) }}
+    <span class="badge grade-{{ r.overall }}">Overall: {{ r.overall }}</span>
+    <span class="muted small">{{ r.n_fail }} fail · {{ r.n_watch }} watch</span>
+  </div>
+  <p class="callout">These are <strong>illustrative</strong> results showing the shape of a classic validation —
+    not the output of a real fitted model. Thresholds are conventional starting points.</p>
+</div>
+
+<div class="card">
+  <h2>Validation scorecard</h2>
+  <table class="tbl">
+    <thead><tr><th>Check</th><th>Value</th><th>Threshold</th><th>Result</th></tr></thead>
+    <tbody>
+      {% for c in r.checks %}
+      <tr>
+        <td>{{ c.name }}</td>
+        <td class="mono">{{ c.value }}</td>
+        <td class="mono muted">{{ c.threshold }}</td>
+        <td>{{ ui.grade_badge(c.grade) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<section class="grid-2">
+  <div class="card">
+    <h2>Discrimination — ROC</h2>
+    <p class="muted small">AUC {{ r.auc }} · Gini {{ r.gini }} · KS {{ r.ks }}</p>
+    {{ r.charts.roc | safe }}
+  </div>
+  <div class="card">
+    <h2>Discrimination — confusion matrix</h2>
+    <p class="muted small">At the chosen score cut-off (illustrative).</p>
+    {{ r.charts.confusion | safe }}
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card">
+    <h2>Calibration — reliability curve</h2>
+    <p class="muted small">Brier score {{ r.brier }} (lower is better). Closer to the diagonal = better calibrated.</p>
+    {{ r.charts.reliability | safe }}
+  </div>
+  <div class="card">
+    <h2>Stability — population stability index (PSI)</h2>
+    <p class="muted small">Latest PSI {{ r.psi_latest }}. &lt;0.10 stable · 0.10–0.25 watch · &gt;0.25 breach.</p>
+    {{ r.charts.psi | safe }}
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card">
+    <h2>Explainability — feature importance</h2>
+    <p class="muted small">Relative contribution of each feature (SHAP-style, illustrative).</p>
+    {{ r.charts.features | safe }}
+  </div>
+  <div class="card">
+    <h2>Fairness — four-fifths rule</h2>
+    <p class="muted small">Selection-rate ratio vs. reference group. Below 0.80 (dashed line) flags potential disparate impact.</p>
+    {{ r.charts.fairness | safe }}
+  </div>
+</section>
+
+<div class="card">
+  <h2>Robustness & sensitivity</h2>
+  <p class="muted small">AUC as increasing input noise is injected. Relative drop at 30% noise:
+    <strong>{{ (r.rel_drop * 100) | round(1) }}%</strong>.</p>
+  {{ r.charts.robust | safe }}
+</div>
+
+<div class="actions">
+  <a class="btn" href="/models/{{ m.id }}">← Back to model</a>
+  <a class="btn btn-primary" href="/models/{{ m.id }}/report">Draft validation report</a>
+</div>
+
+{% endblock %}

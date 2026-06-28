@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}{{ m.name }} · {{ app_title }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="crumbs"><a href="/inventory">Inventory</a> / <span class="mono">{{ m.id }}</span></div>
+  <h1>{{ m.name }}</h1>
+  <div class="badge-row">
+    {{ ui.family_badge(m._tier.is_llm) }}
+    {{ ui.tier_badge(m._tier.tier) }}
+    {{ ui.reval_badge(m._reval.state, m._reval.state_label) }}
+    <span class="badge pill">{{ m.status }}</span>
+    <span class="badge pill">{{ m.vendor }}</span>
+  </div>
+  <div class="actions">
+    {% if m._tier.is_llm %}
+      <a class="btn btn-primary" href="/models/{{ m.id }}/track-b">Validate — Track B (GenAI / live)</a>
+    {% else %}
+      <a class="btn btn-primary" href="/models/{{ m.id }}/track-a">Validate — Track A (traditional ML)</a>
+    {% endif %}
+    <a class="btn" href="/models/{{ m.id }}/report">Draft validation report</a>
+  </div>
+</div>
+
+<section class="grid-2">
+  <div class="card">
+    <h2>Profile</h2>
+    <dl class="profile">
+      <dt>Owner</dt><dd>{{ m.owner }}</dd>
+      <dt>Business area</dt><dd>{{ m.business_area }}</dd>
+      <dt>Purpose</dt><dd>{{ m.purpose }}</dd>
+      <dt>Methodology</dt><dd>{{ m.methodology }}</dd>
+      <dt>In-house / vendor</dt><dd>{{ m.vendor }}</dd>
+      <dt>Status</dt><dd>{{ m.status }}</dd>
+      <dt>Go-live date</dt><dd>{{ m.go_live_date or "—" }}</dd>
+      <dt>Last validation</dt><dd>{{ m.last_validation_date or "Never" }}</dd>
+      <dt>Next due</dt><dd>{{ m._reval.next_due_str }} ({{ m._reval.state_label }})</dd>
+    </dl>
+  </div>
+
+  <div class="card tier-card" id="tier-preview"
+       data-family="{{ m.family }}">
+    <h2>Risk tier <span class="muted small" id="preview-flag"></span></h2>
+    <div class="tier-headline">
+      <span class="badge tier-{{ m._tier.tier }}" id="tier-badge">{{ m._tier.tier_label }}</span>
+      <div class="tier-score">weighted score <strong id="tier-score">{{ m._tier.score }}</strong> / 3.0</div>
+    </div>
+    <p class="tier-freq">Revalidation: <strong id="tier-frequency">{{ m._tier.frequency_label }}</strong></p>
+    <div id="tier-escalations" class="escalations">
+      {% if m._tier.escalations %}
+        <div class="esc-title">Escalation rules applied:</div>
+        <ul>{% for e in m._tier.escalations %}<li>{{ e }}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+    <p class="muted small">The tier is a transparent weighted average of the ratings below, plus a few
+      explicit escalation rules. Change a rating to see it recalculate; press <em>Save</em> to keep it.</p>
+  </div>
+</section>
+
+<div class="card">
+  <h2>AI-specific risk rating — dimension breakdown</h2>
+  <p class="muted small">Each dimension is rated Low / Medium / High (1–3). 3 always means higher risk.
+    This is the <em>why</em> behind the tier.</p>
+
+  <form method="post" action="/models/{{ m.id }}/ratings" id="ratings-form">
+    <table class="tbl ratings">
+      <thead>
+        <tr><th>Dimension</th><th>Rating</th><th>What that means</th><th class="num">Weight</th><th class="num">Contribution</th></tr>
+      </thead>
+      <tbody>
+        {% for d in dimensions %}
+        {% set rating = m.ratings.get(d.key, 1) %}
+        <tr>
+          <td><strong>{{ d.label }}</strong><div class="muted small">{{ d.note }}</div></td>
+          <td>
+            <select class="rating-input" name="{{ d.key }}" data-dim="{{ d.key }}">
+              <option value="1" {% if rating==1 %}selected{% endif %}>Low</option>
+              <option value="2" {% if rating==2 %}selected{% endif %}>Medium</option>
+              <option value="3" {% if rating==3 %}selected{% endif %}>High</option>
+            </select>
+          </td>
+          <td class="leveltext" data-leveltext="{{ d.key }}">{{ d.levels[rating] }}</td>
+          <td class="num">{{ d.weight }}</td>
+          <td class="num"><span data-weighted="{{ d.key }}">{{ (rating * d.weight) | round(2) }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="form-row">
+      <label>Last validation date
+        <input type="date" name="last_validation_date" value="{{ m.last_validation_date }}" />
+      </label>
+      <button class="btn btn-primary" type="submit">Save ratings</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Findings for this model</h2>
+  {% if findings %}
+  <table class="tbl compact">
+    <thead><tr><th>ID</th><th>Severity</th><th>Status</th><th>Title</th><th>Target</th></tr></thead>
+    <tbody>
+      {% for f in findings %}
+      <tr>
+        <td>{{ f.id }}</td>
+        <td>{{ ui.severity_badge(f.severity) }}</td>
+        <td>{{ ui.status_badge(f.status) }}</td>
+        <td>{{ f.title }}</td>
+        <td>{{ f.target_date }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">No findings recorded for this model.</p>{% endif %}
+  <p><a href="/findings?model_id={{ m.id }}">Manage findings for this model →</a></p>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>window.MRM_DIM_LEVELS = {{ dimensions | tojson }};</script>
+{% endblock %}

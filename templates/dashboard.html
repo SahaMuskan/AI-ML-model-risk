@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Dashboard · {{ app_title }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <h1>Portfolio dashboard</h1>
+  <p class="muted">A model risk view across the whole inventory — and the contrast that drives this whole tool: traditional ML vs. generative AI.</p>
+</div>
+
+<section class="stat-row">
+  <div class="stat-card">
+    <div class="stat-num">{{ total }}</div>
+    <div class="stat-label">Models in inventory</div>
+  </div>
+  <div class="stat-card accent-ml">
+    <div class="stat-num">{{ ml_count }}</div>
+    <div class="stat-label">Traditional ML</div>
+  </div>
+  <div class="stat-card accent-gen">
+    <div class="stat-num">{{ gen_count }}</div>
+    <div class="stat-label">Generative / LLM</div>
+  </div>
+  <div class="stat-card {% if overdue %}accent-bad{% endif %}">
+    <div class="stat-num">{{ overdue|length }}</div>
+    <div class="stat-label">Overdue revalidation</div>
+  </div>
+  <div class="stat-card {% if due_soon %}accent-warn{% endif %}">
+    <div class="stat-num">{{ due_soon|length }}</div>
+    <div class="stat-label">Due within 90 days</div>
+  </div>
+  <div class="stat-card {% if open_findings %}accent-warn{% endif %}">
+    <div class="stat-num">{{ open_findings|length }}</div>
+    <div class="stat-label">Open findings</div>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card">
+    <h2>ML vs. GenAI split</h2>
+    <div class="donut-wrap">
+      {{ family_donut | safe }}
+      <ul class="legend">
+        <li><span class="dot" style="background:#2f6f8f"></span> Traditional ML — {{ ml_count }}</li>
+        <li><span class="dot" style="background:#7d5ba6"></span> Generative / LLM — {{ gen_count }}</li>
+      </ul>
+    </div>
+    <p class="muted small">The two families are validated very differently. Traditional ML goes through Track A
+      (discrimination, calibration, stability, fairness…). GenAI goes through Track B, where we actually send
+      the model prompts and check what comes back.</p>
+  </div>
+
+  <div class="card">
+    <h2>Risk-tier breakdown</h2>
+    <div class="donut-wrap">
+      {{ tier_donut | safe }}
+      <ul class="legend">
+        <li><span class="dot" style="background:#c0392b"></span> Tier 1 (annual) — {{ tier_counts[1] }}</li>
+        <li><span class="dot" style="background:#d98e04"></span> Tier 2 (2-yearly) — {{ tier_counts[2] }}</li>
+        <li><span class="dot" style="background:#2e8b57"></span> Tier 3 (3-yearly) — {{ tier_counts[3] }}</li>
+      </ul>
+    </div>
+    <p class="muted small">Tiers come from the AI-specific risk rating — not just materiality and complexity.
+      <a href="/methodology">How the tiering works →</a></p>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card">
+    <h2>Needs attention — revalidation</h2>
+    {% if overdue or due_soon %}
+    <table class="tbl compact">
+      <thead><tr><th>Model</th><th>Family</th><th>Tier</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for m in overdue + due_soon %}
+        <tr>
+          <td><a href="/models/{{ m.id }}">{{ m.name }}</a><div class="muted small">{{ m.id }}</div></td>
+          <td>{{ ui.family_badge(m._tier.is_llm) }}</td>
+          <td>{{ ui.tier_badge(m._tier.tier) }}</td>
+          <td>{{ ui.reval_badge(m._reval.state, m._reval.state_label) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="muted">Nothing overdue or due soon.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Open findings</h2>
+    <div class="mini-stats">
+      <span class="badge sev-High">{{ sev_counts['High'] }} High</span>
+      <span class="badge sev-Medium">{{ sev_counts['Medium'] }} Medium</span>
+      <span class="badge sev-Low">{{ sev_counts['Low'] }} Low</span>
+      {% if overdue_findings %}<span class="badge state-overdue">{{ overdue_findings|length }} overdue</span>{% endif %}
+    </div>
+    {% if open_findings %}
+    <table class="tbl compact">
+      <thead><tr><th>ID</th><th>Severity</th><th>Title</th><th>Target</th></tr></thead>
+      <tbody>
+        {% for f in open_findings[:8] %}
+        <tr>
+          <td>{{ f.id }}</td>
+          <td>{{ ui.severity_badge(f.severity) }}</td>
+          <td>{{ f.title }}</td>
+          <td>{{ f.target_date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p><a href="/findings">View the full findings log →</a></p>
+    {% else %}<p class="muted">No open findings.</p>{% endif %}
+  </div>
+</section>
+
+{% endblock %}

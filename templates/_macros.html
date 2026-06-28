@@ -1,0 +1,26 @@
+{# Reusable display macros #}
+
+{% macro tier_badge(tier) %}
+<span class="badge tier-{{ tier }}">Tier {{ tier }}</span>
+{% endmacro %}
+
+{% macro family_badge(is_llm) %}
+{% if is_llm %}<span class="badge fam-gen">GenAI / LLM</span>
+{% else %}<span class="badge fam-ml">Traditional ML</span>{% endif %}
+{% endmacro %}
+
+{% macro reval_badge(state, label) %}
+<span class="badge state-{{ state }}">{{ label }}</span>
+{% endmacro %}
+
+{% macro severity_badge(sev) %}
+<span class="badge sev-{{ sev }}">{{ sev }}</span>
+{% endmacro %}
+
+{% macro status_badge(status) %}
+<span class="badge fstatus-{{ status | replace(' ', '') }}">{{ status }}</span>
+{% endmacro %}
+
+{% macro grade_badge(grade) %}
+<span class="badge grade-{{ grade }}">{{ grade }}</span>
+{% endmacro %}

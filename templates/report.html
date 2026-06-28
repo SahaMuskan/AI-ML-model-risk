@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Report · {{ r.model.name }}{% endblock %}
+{% block content %}
+
+<div class="page-head no-print">
+  <div class="crumbs"><a href="/inventory">Inventory</a> / <a href="/models/{{ r.model.id }}">{{ r.model.id }}</a> / Report</div>
+  <div class="actions">
+    <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+    <a class="btn" href="/models/{{ r.model.id }}/report.md">Download Markdown</a>
+  </div>
+</div>
+
+<article class="report">
+  <header class="report-head">
+    <div class="report-kicker">Model Validation Report · SR 11-7-style draft · ILLUSTRATIVE</div>
+    <h1>{{ r.model.name }} <span class="mono">({{ r.model.id }})</span></h1>
+    <div class="badge-row">
+      {{ ui.family_badge(r.is_llm) }}
+      {{ ui.tier_badge(r.tier.tier) }}
+      <span class="badge grade-{{ r.opinion | replace(' ', '') }}">{{ r.opinion }}</span>
+      <span class="muted small">Generated {{ r.generated }}</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>1. Executive summary</h2>
+    <p>{{ r.exec_summary }}</p>
+  </section>
+
+  <section>
+    <h2>2. Model overview</h2>
+    <dl class="profile">
+      <dt>Owner</dt><dd>{{ r.model.owner }}</dd>
+      <dt>Business area</dt><dd>{{ r.model.business_area }}</dd>
+      <dt>Family</dt><dd>{{ r.model.family }}</dd>
+      <dt>Methodology</dt><dd>{{ r.model.methodology }}</dd>
+      <dt>In-house / vendor</dt><dd>{{ r.model.vendor }}</dd>
+      <dt>Status</dt><dd>{{ r.model.status }}</dd>
+      <dt>Go-live</dt><dd>{{ r.model.go_live_date or "—" }}</dd>
+      <dt>Last validation</dt><dd>{{ r.model.last_validation_date or "Never" }}</dd>
+      <dt>Purpose</dt><dd>{{ r.model.purpose }}</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>3. Risk-tiering rationale</h2>
+    <p><strong>{{ r.tier.tier_label }}</strong> — weighted score {{ r.tier.score }}/3.0.
+       Revalidation cadence: {{ r.tier.frequency_label }}; next due {{ r.reval.next_due_str }}
+       ({{ r.reval.state_label }}).</p>
+    <table class="tbl">
+      <thead><tr><th>Dimension</th><th>Rating</th><th>Weight</th><th>Basis</th></tr></thead>
+      <tbody>
+        {% for c in r.tier.contributions %}
+        <tr><td>{{ c.label }}</td><td>{{ c.rating_word }}</td><td class="num">{{ c.weight }}</td><td class="muted">{{ c.level_text }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if r.tier.escalations %}
+    <p><strong>Escalation rules applied:</strong></p>
+    <ul>{% for e in r.tier.escalations %}<li>{{ e }}</li>{% endfor %}</ul>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>4. Validation results</h2>
+    {% if r.track == "A" %}
+      <p>Track A (traditional ML) — overall <span class="badge grade-{{ r.evidence.overall }}">{{ r.evidence.overall }}</span></p>
+      <table class="tbl">
+        <thead><tr><th>Check</th><th>Value</th><th>Threshold</th><th>Result</th></tr></thead>
+        <tbody>
+          {% for c in r.evidence.checks %}
+          <tr><td>{{ c.name }}</td><td class="mono">{{ c.value }}</td><td class="mono muted">{{ c.threshold }}</td><td>{{ ui.grade_badge(c.grade) }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      {% if r.evidence and r.evidence.ok %}
+        <p>Track B (GenAI) — {{ r.evidence.mode }} run, overall
+           <span class="badge grade-{{ r.evidence.summary.overall }}">{{ r.evidence.summary.overall }}</span></p>
+        <table class="tbl">
+          <thead><tr><th>Test area</th><th>Status</th><th>Metric</th></tr></thead>
+          <tbody>
+            {% for t in r.evidence.tests %}
+            <tr><td>{{ t.name }}</td><td>{{ ui.grade_badge(t.status) }}</td><td class="muted">{{ t.metric }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="callout">No Track B test evidence has been captured yet.
+           <a href="/models/{{ r.model.id }}/track-b" class="no-print">Run the GenAI tests →</a></p>
+      {% endif %}
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>5. Findings / issues</h2>
+    {% if r.all_findings %}
+    <table class="tbl">
+      <thead><tr><th>ID</th><th>Severity</th><th>Status</th><th>Title</th><th>Target</th></tr></thead>
+      <tbody>
+        {% for f in r.all_findings %}
+        <tr><td>{{ f.id }}</td><td>{{ ui.severity_badge(f.severity) }}</td><td>{{ ui.status_badge(f.status) }}</td><td>{{ f.title }}</td><td>{{ f.target_date }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="muted">No findings recorded.</p>{% endif %}
+  </section>
+
+  <section>
+    <h2>6. Validation opinion</h2>
+    <p class="opinion-line"><span class="badge grade-{{ r.opinion | replace(' ', '') }}">{{ r.opinion }}</span></p>
+    <ul>{% for reason in r.opinion_reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+  </section>
+
+  <footer class="report-foot muted small">
+    Auto-generated draft from illustrative data. Thresholds and test sets are starting points requiring
+    calibration. SR 11-7, the NIST AI RMF and the EU AI Act evolve — verify against current versions for your jurisdiction.
+  </footer>
+</article>
+
+{% endblock %}

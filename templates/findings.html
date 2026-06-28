@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Findings · {{ app_title }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <h1>Findings &amp; issues log</h1>
+  <p class="muted">Per-model issues with source, severity, owner, target date and status. Overdue open items are flagged.</p>
+</div>
+
+<form class="filters" method="get" action="/findings">
+  <select name="status">
+    <option value="">All statuses</option>
+    {% for s in ["Open", "In Progress", "Closed"] %}
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <select name="severity">
+    <option value="">All severities</option>
+    {% for s in ["High", "Medium", "Low"] %}
+      <option value="{{ s }}" {% if severity==s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <select name="model_id">
+    <option value="">All models</option>
+    {% for m in models %}<option value="{{ m.id }}" {% if model_id==m.id %}selected{% endif %}>{{ m.id }} — {{ m.name }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">Filter</button>
+  <a class="btn btn-ghost" href="/findings">Clear</a>
+</form>
+
+<table class="tbl">
+  <thead>
+    <tr><th>ID</th><th>Model</th><th>Severity</th><th>Title / source</th><th>Owner</th><th>Target</th><th>Status</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for f in findings %}
+    <tr class="{{ 'row-overdue' if f._overdue }}">
+      <td class="mono">{{ f.id }}</td>
+      <td><a href="/models/{{ f.model_id }}">{{ f._model_name }}</a><div class="muted small">{{ f.model_id }}</div></td>
+      <td>{{ ui.severity_badge(f.severity) }}</td>
+      <td><strong>{{ f.title }}</strong>
+          <div class="muted small">{{ f.description }}</div>
+          <div class="muted small">source: {{ f.source }} · raised {{ f.raised_date }}</div></td>
+      <td>{{ f.owner }}</td>
+      <td>{{ f.target_date }}{% if f._overdue %} <span class="badge state-overdue">overdue</span>{% endif %}</td>
+      <td>{{ ui.status_badge(f.status) }}</td>
+      <td>
+        <form method="post" action="/findings/{{ f.id }}/status" class="inline-form">
+          <input type="hidden" name="next" value="/findings?status={{ status }}&severity={{ severity }}&model_id={{ model_id }}" />
+          <select name="status" onchange="this.form.submit()">
+            {% for s in ["Open", "In Progress", "Closed"] %}
+              <option value="{{ s }}" {% if f.status==s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="muted">No findings match your filters.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="card">
+  <h2>Add a finding</h2>
+  <form method="post" action="/findings/new" class="finding-form">
+    <div class="ff-grid">
+      <label>Model
+        <select name="model_id" required>
+          {% for m in models %}<option value="{{ m.id }}" {% if model_id==m.id %}selected{% endif %}>{{ m.id }} — {{ m.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Severity
+        <select name="severity">
+          <option>High</option><option selected>Medium</option><option>Low</option>
+        </select>
+      </label>
+      <label>Source
+        <select name="source">
+          <option>Validation</option><option>Internal Audit</option>
+          <option>Ongoing Monitoring</option><option>Outcomes Analysis</option><option>Other</option>
+        </select>
+      </label>
+      <label>Owner <input type="text" name="owner" placeholder="Name / team" /></label>
+      <label>Target date <input type="date" name="target_date" /></label>
+    </div>
+    <label class="full">Title <input type="text" name="title" required placeholder="Short description of the issue" /></label>
+    <label class="full">Detail <textarea name="description" rows="2"></textarea></label>
+    <button class="btn btn-primary" type="submit">Add finding</button>
+  </form>
+</div>
+
+{% endblock %}

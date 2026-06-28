@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Inventory · {{ app_title }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <h1>Model inventory</h1>
+  <p class="muted">{{ total }} model(s). Each row links to its profile, tiering breakdown and validation track.</p>
+</div>
+
+<form class="filters" method="get" action="/inventory">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search name / id / owner…" />
+  <select name="family">
+    <option value="" {% if not family %}selected{% endif %}>All families</option>
+    <option value="ml" {% if family=='ml' %}selected{% endif %}>Traditional ML</option>
+    <option value="gen" {% if family=='gen' %}selected{% endif %}>Generative / LLM</option>
+  </select>
+  <select name="tier">
+    <option value="">All tiers</option>
+    <option value="1" {% if tier=='1' %}selected{% endif %}>Tier 1</option>
+    <option value="2" {% if tier=='2' %}selected{% endif %}>Tier 2</option>
+    <option value="3" {% if tier=='3' %}selected{% endif %}>Tier 3</option>
+  </select>
+  <select name="area">
+    <option value="">All areas</option>
+    {% for a in areas %}<option value="{{ a }}" {% if area==a %}selected{% endif %}>{{ a }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">Filter</button>
+  <a class="btn btn-ghost" href="/inventory">Clear</a>
+</form>
+
+<table class="tbl">
+  <thead>
+    <tr>
+      <th>ID</th><th>Model</th><th>Family</th><th>Owner / area</th>
+      <th>Vendor</th><th>Status</th><th>Tier</th><th>Revalidation</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in models %}
+    <tr>
+      <td class="mono">{{ m.id }}</td>
+      <td><a href="/models/{{ m.id }}"><strong>{{ m.name }}</strong></a>
+          <div class="muted small">{{ m.methodology }}</div></td>
+      <td>{{ ui.family_badge(m._tier.is_llm) }}</td>
+      <td>{{ m.owner }}<div class="muted small">{{ m.business_area }}</div></td>
+      <td>{{ m.vendor }}</td>
+      <td><span class="badge pill">{{ m.status }}</span></td>
+      <td>{{ ui.tier_badge(m._tier.tier) }}<div class="muted small">{{ m._tier.frequency_label }}</div></td>
+      <td>{{ ui.reval_badge(m._reval.state, m._reval.state_label) }}
+          <div class="muted small">next: {{ m._reval.next_due_str }}</div></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="muted">No models match your filters.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

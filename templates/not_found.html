@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Not found · {{ app_title }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Model not found</h1>
+  <p class="muted">No model with id <span class="mono">{{ model_id }}</span> exists.</p>
+  <a class="btn btn-primary" href="/inventory">Back to inventory</a>
+</div>
+{% endblock %}

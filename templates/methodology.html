@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Methodology · {{ app_title }}{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <h1>Methodology note</h1>
+  <p class="muted">Plain English, for a reviewer or auditor — not a programmer. How the tiering works, what the
+    thresholds mean, and what each validation test actually checks.</p>
+</div>
+
+<div class="card">
+  <h2>1. How the risk tiering works</h2>
+  <p>Traditional model-risk tiering leans on <em>materiality</em> and <em>complexity</em>. Those still matter, but
+    they don't capture what makes AI — and especially generative AI — risky. So every model is rated
+    <strong>Low / Medium / High (1–3)</strong> on a set of dimensions chosen for AI risk. <strong>3 always means
+    higher risk.</strong></p>
+  <table class="tbl">
+    <thead><tr><th>Dimension</th><th>Applies to</th><th>Weight</th><th>What it captures</th></tr></thead>
+    <tbody>
+      {% for d in dimensions %}
+      <tr>
+        <td><strong>{{ d.label }}</strong></td>
+        <td>{{ "All models" if d.applies == "all" else "GenAI / LLM only" }}</td>
+        <td class="num">{{ d.weight }}</td>
+        <td class="muted">{{ d.note }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p>The overall score is the <strong>weighted average</strong> of the applicable ratings (so it always lands
+    between 1.0 and 3.0). That score maps to a tier:</p>
+  <ul>
+    <li><span class="badge tier-1">Tier 1</span> score ≥ 2.33 — highest risk — <strong>annual</strong> revalidation</li>
+    <li><span class="badge tier-2">Tier 2</span> score 1.75–2.32 — <strong>every 2 years</strong></li>
+    <li><span class="badge tier-3">Tier 3</span> score &lt; 1.75 — <strong>every 3 years</strong></li>
+  </ul>
+  <p>On top of the score, a few <strong>explicit, stated escalation rules</strong> can bump a model up — so the
+    tiering is never a black box:</p>
+  <ul>
+    <li>A <strong>highly material</strong> model can't sit in Tier 3 (escalated to at least Tier 2).</li>
+    <li><strong>Fully automated action</strong> on a material decision escalates to Tier 1.</li>
+    <li>For GenAI, <strong>high hallucination AND high prompt-injection</strong> exposure escalates to Tier 1.</li>
+  </ul>
+  <p class="muted small">You can adjust any model's ratings on its page and watch the tier and revalidation
+    frequency recalculate, with the rationale shown line by line.</p>
+</div>
+
+<div class="card">
+  <h2>2. Track A — what the traditional-ML thresholds mean</h2>
+  <p>These are the checks you'd expect for a scorecard or similar statistical model. The thresholds below are
+    <strong>conventional starting points</strong>, not house policy — they'd need calibrating to your portfolio.</p>
+  <table class="tbl">
+    <thead><tr><th>Test</th><th>What it checks</th><th>Illustrative threshold</th></tr></thead>
+    <tbody>
+      <tr><td>Discrimination (AUC / Gini / KS)</td><td>Can the model separate good from bad outcomes?</td>
+          <td class="mono">AUC ≥ {{ thresholds.auc }}, Gini ≥ {{ thresholds.gini }}, KS ≥ {{ thresholds.ks }}</td></tr>
+      <tr><td>Calibration (Brier, reliability curve)</td><td>Do predicted probabilities match observed reality?</td>
+          <td class="mono">Brier ≤ {{ thresholds.brier }}</td></tr>
+      <tr><td>Stability / drift (PSI)</td><td>Has the population shifted since the model was built?</td>
+          <td class="mono">&lt; {{ thresholds.psi_watch }} stable · ≤ {{ thresholds.psi }} watch · &gt; {{ thresholds.psi }} breach</td></tr>
+      <tr><td>Explainability (feature importance)</td><td>Which inputs drive the output? Can we explain a decision?</td>
+          <td class="muted">qualitative</td></tr>
+      <tr><td>Fairness (four-fifths rule)</td><td>Are selection rates across groups within 80% of the reference?</td>
+          <td class="mono">ratio ≥ {{ thresholds.four_fifths }}</td></tr>
+      <tr><td>Robustness / sensitivity</td><td>Does performance hold up under input noise / shift?</td>
+          <td class="mono">AUC drop ≤ {{ (thresholds.robust_drop * 100) | round(0) }}% under stress</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>3. Track B — what each GenAI test actually checks</h2>
+  <p>Conventional MRM has no real answer for a generative model: there's usually no single labelled "right
+    answer", and you can't inspect its internals. So instead of scoring numbers, Track B <strong>exercises the
+    model</strong> — it sends a banking chatbot prompts and checks what comes back. Where there's no single right
+    answer, a second model acts as an impartial judge.</p>
+  <table class="tbl">
+    <thead><tr><th>Test</th><th>What it checks</th><th>Calls per run</th></tr></thead>
+    <tbody>
+      {% for t in tests %}
+      <tr><td><strong>{{ t.name }}</strong></td><td class="muted">{{ t.desc }}</td>
+          <td class="num">{{ t.chatbot_calls + t.judge_calls }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="callout">
+    <strong>Cost honesty.</strong> A full Track B run makes about <strong>{{ estimate.total }} model calls</strong>
+    (~{{ estimate.chatbot }} to the chatbot + ~{{ estimate.judge }} to the judge).
+    {% if live_mode %}You are in <strong>live</strong> mode, so these are real calls that cost money — typically
+    a few US cents per full run with a small model, but check current pricing.{% else %}You are in
+    <strong>simulated</strong> mode (no key), so runs cost nothing and the results are illustrative stand-ins.{% endif %}
+  </p>
+</div>
+
+<div class="card callout-card">
+  <h2>4. Please read this honestly</h2>
+  <ul class="honest">
+    <li><strong>Results are illustrative.</strong> Track A numbers are generated to show the right shape; they
+      are not the output of a real fitted model. The thresholds and the Track B test/eval sets are starting
+      points that need proper calibration and larger samples before anyone relies on them.</li>
+    <li><strong>The GenAI tests make real calls</strong> when an API key is configured — there's a cost and quota
+      implication, and a full run is roughly {{ estimate.total }} calls.</li>
+    <li><strong>This is a fast-moving regulatory area.</strong> SR 11-7, the NIST AI Risk Management Framework and
+      the EU AI Act all evolve. Check anything here against the current versions for your jurisdiction.</li>
+  </ul>
+</div>
+
+{% endblock %}
